@@ -419,7 +419,13 @@ function displayDailyForecast(daily) {
 }
 
 // ===== Weather Code to Icon Mapping =====
-function getWeatherIcon(code, isDay = 1) {
+function getWeatherIcon(code, isDay) {
+    // Default to day if isDay is not strictly 0
+    // Open-Meteo returns 1 for day, 0 for night
+    const isNight = isDay === 0;
+
+    // console.log(`Icon request - Code: ${code}, isDay: ${isDay}, isNight: ${isNight}`);
+
     const iconMap = {
         0: '☀️',      // Clear sky
         1: '🌤️',     // Mainly clear
@@ -452,7 +458,7 @@ function getWeatherIcon(code, isDay = 1) {
     };
 
     // Handle night icons for clear/partly cloudy conditions
-    if (!isDay) {
+    if (isNight) {
         if (code === 0 || code === 1) return '🌙';
         if (code === 2) return '☁️';
     }
