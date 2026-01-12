@@ -496,31 +496,7 @@ function getWeatherDescription(code) {
     return descriptionMap[code] || 'Unknown conditions';
 }
 
-// ===== Check if it's daytime (FIXED) =====
-function isDayTime(sunrise, sunset, timezone) {
-    // Get current time in the location's timezone
-    const now = new Date();
-    const localTimeStr = now.toLocaleString('en-US', { timeZone: timezone || 'UTC' });
-    const localTime = new Date(localTimeStr);
 
-    const sunriseTime = new Date(sunrise);
-    const sunsetTime = new Date(sunset);
-
-    // Extract just the time components for comparison
-    const currentHour = localTime.getHours();
-    const currentMinute = localTime.getMinutes();
-    const currentTimeInMinutes = currentHour * 60 + currentMinute;
-
-    const sunriseHour = sunriseTime.getHours();
-    const sunriseMinute = sunriseTime.getMinutes();
-    const sunriseTimeInMinutes = sunriseHour * 60 + sunriseMinute;
-
-    const sunsetHour = sunsetTime.getHours();
-    const sunsetMinute = sunsetTime.getMinutes();
-    const sunsetTimeInMinutes = sunsetHour * 60 + sunsetMinute;
-
-    return currentTimeInMinutes >= sunriseTimeInMinutes && currentTimeInMinutes <= sunsetTimeInMinutes;
-}
 
 // ===== Get AQI Category (NEW) =====
 function getAQICategory(aqi) {
