@@ -221,7 +221,7 @@ async function searchLocation() {
 async function fetchWeatherData(lat, lon, cityName = null, country = null) {
     try {
         // Open-Meteo API URL with all required parameters
-        const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,surface_pressure,uv_index&hourly=temperature_2m,precipitation_probability,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,sunrise,sunset,uv_index_max&timezone=auto`;
+        const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,surface_pressure,uv_index,is_day&hourly=temperature_2m,precipitation_probability,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,sunrise,sunset,uv_index_max&timezone=auto`;
 
         // Open-Meteo Air Quality API (Free, no token required)
         const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5,pm10,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone`;
@@ -300,8 +300,8 @@ function displayWeatherData(data, aqiData, lat, lon, cityName, country) {
         elements.countryBadge.textContent = '🌍 Global';
     }
 
-    // Day/Night indicator (FIXED)
-    const isDaytime = isDayTime(daily.sunrise[0], daily.sunset[0], timezone);
+    // Day/Night indicator
+    const isDaytime = current.is_day === 1;
     elements.dayNightBadge.textContent = isDaytime ? '☀️ Day' : '🌙 Night';
 
     // Location coordinates
@@ -352,7 +352,7 @@ function displayWeatherData(data, aqiData, lat, lon, cityName, country) {
     }
 
     // Weather icon
-    elements.weatherIcon.textContent = getWeatherIcon(current.weather_code);
+    elements.weatherIcon.textContent = getWeatherIcon(current.weather_code, current.is_day);
 
     // Hourly forecast (next 24 hours)
     displayHourlyForecast(hourly);
@@ -369,14 +369,13 @@ function displayHourlyForecast(hourly) {
     for (let i = 0; i < 24; i++) {
         const time = new Date(hourly.time[i]);
         const temp = Math.round(hourly.temperature_2m[i]);
-        const weatherCode = hourly.weather_code[i];
-        const precipitation = hourly.precipitation_probability[i];
+        const isDay = hourly.is_day[i]; // Get day/night status
 
         const hourlyItem = document.createElement('div');
         hourlyItem.className = 'hourly-item';
         hourlyItem.innerHTML = `
             <div class="hourly-time">${time.getHours()}:00</div>
-            <div class="hourly-icon">${getWeatherIcon(weatherCode)}</div>
+            <div class="hourly-icon">${getWeatherIcon(weatherCode, isDay)}</div>
             <div class="hourly-temp">${temp}°C</div>
             ${precipitation > 0 ? `<div class="hourly-precipitation">${precipitation}%</div>` : ''}
         `;
@@ -420,7 +419,7 @@ function displayDailyForecast(daily) {
 }
 
 // ===== Weather Code to Icon Mapping =====
-function getWeatherIcon(code) {
+function getWeatherIcon(code, isDay = 1) {
     const iconMap = {
         0: '☀️',      // Clear sky
         1: '🌤️',     // Mainly clear
@@ -451,6 +450,12 @@ function getWeatherIcon(code) {
         96: '⛈️',     // Thunderstorm with slight hail
         99: '⛈️'      // Thunderstorm with heavy hail
     };
+
+    // Handle night icons for clear/partly cloudy conditions
+    if (!isDay) {
+        if (code === 0 || code === 1) return '🌙';
+        if (code === 2) return '☁️';
+    }
 
     return iconMap[code] || '🌤️';
 }
