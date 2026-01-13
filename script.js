@@ -226,14 +226,25 @@ async function fetchWeatherData(lat, lon, cityName = null, country = null) {
         // Open-Meteo Air Quality API (Free, no token required)
         const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5,pm10,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone`;
 
-        // Fetch both APIs in parallel
-        const [weatherResponse, aqiResponse] = await Promise.all([
-            fetch(weatherUrl),
-            fetch(aqiUrl)
-        ]);
-
+        // Fetch weather data first (Critical)
+        const weatherResponse = await fetch(weatherUrl);
+        if (!weatherResponse.ok) {
+            throw new Error(`Weather API Error: ${weatherResponse.status} ${weatherResponse.statusText}`);
+        }
         const data = await weatherResponse.json();
-        const aqiData = await aqiResponse.json();
+
+        // Fetch AQI data (Optional - treat failure as non-fatal)
+        let aqiData = null;
+        try {
+            const aqiResponse = await fetch(aqiUrl);
+            if (aqiResponse.ok) {
+                aqiData = await aqiResponse.json();
+            } else {
+                console.warn(`AQI API Error: ${aqiResponse.status} ${aqiResponse.statusText}`);
+            }
+        } catch (aqiError) {
+            console.warn('AQI Fetch failed:', aqiError);
+        }
 
         if (!data.current) {
             showError('Unable to fetch weather data');
@@ -369,6 +380,8 @@ function displayHourlyForecast(hourly) {
     for (let i = 0; i < 24; i++) {
         const time = new Date(hourly.time[i]);
         const temp = Math.round(hourly.temperature_2m[i]);
+        const weatherCode = hourly.weather_code[i];
+        const precipitation = hourly.precipitation_probability[i];
         const isDay = hourly.is_day[i]; // Get day/night status
 
         const hourlyItem = document.createElement('div');
@@ -420,11 +433,9 @@ function displayDailyForecast(daily) {
 
 // ===== Weather Code to Icon Mapping =====
 function getWeatherIcon(code, isDay) {
-    // Default to day if isDay is not strictly 0
+    // Default to day if isDay is not provided or not 0
     // Open-Meteo returns 1 for day, 0 for night
     const isNight = isDay === 0;
-
-    // console.log(`Icon request - Code: ${code}, isDay: ${isDay}, isNight: ${isNight}`);
 
     const iconMap = {
         0: '☀️',      // Clear sky
@@ -457,10 +468,14 @@ function getWeatherIcon(code, isDay) {
         99: '⛈️'      // Thunderstorm with heavy hail
     };
 
-    // Handle night icons for clear/partly cloudy conditions
+    // Handle night icons
     if (isNight) {
+        // Clear or mainly clear -> Moon
         if (code === 0 || code === 1) return '🌙';
+        // Partly cloudy -> Cloud
         if (code === 2) return '☁️';
+        // Overcast -> Cloud
+        if (code === 3) return '☁️';
     }
 
     return iconMap[code] || '🌤️';
